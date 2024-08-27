@@ -1,13 +1,25 @@
+
+
 spring:
   security:
     jwt:
-      key: abcdefghijk
-      expire: 7
+      key: 'abcdefghijklmn'
+      expire: 72
+      limit:
+        base: 10
+        upgrade: 300
+        frequency: 30
+    filter:
+      order: -100
+  influx:
+    url: http://8.137.50.120:8086
+    user: admin
+    password: 20031213dmy
   datasource:
     username: root
     password: 20031213dmy
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/my_project
+    url: jdbc:mysql://8.137.50.120:3306/monitor
   mail:
     host: smtp.163.com
     username: 18989152637@163.com
@@ -18,3 +30,22 @@ spring:
     username: admin
     password: 20031213dmyD!
     virtual-host: mail
+  web:
+    verify:
+      mail-limit: 60
+    flow:
+      period: 30
+      limit: 100
+      block: 30
+    cors:
+      origin: '*'
+      credentials: false
+      methods: '*'
+  data:
+    redis:
+      port: 6379
+      host: 8.137.50.120
+      password: 20031213dmy
+server:
+  address: 0.0.0.0
+

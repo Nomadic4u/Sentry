@@ -25,11 +25,10 @@ public class MailQueueListener {
         Integer code = (Integer) data.get("code");
         String type = (String) data.get("type");
         SimpleMailMessage message = switch (type) {
-            case "register" -> createMessage("欢迎注册我们的网站",
-                    "您的邮件注册验证码为: " + code + " 有效时间三分钟. 为了保障您的安全, 请勿泄露验证码给他人",
-                    email);
             case "reset" -> createMessage("您的密码重置邮件",
                     "你好, 您正在进行重置密码操作, 验证码: " + code + "有效时间3分钟", email);
+            case "modify" -> createMessage("您的邮件修改邮件",
+                    "你好, 您正在绑定新的电子邮箱, 验证码: " + code + "有效时间3分钟", email);
             default -> null;
         };
         if (message == null)

@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @Slf4j
-@RestControllerAdvice // 这个注解用于全局处理RESTful抛出的错误
+@RestControllerAdvice // 这个注解用于全局处理RESTful抛出的错误, 标识一个类作为全局异常处理器
 public class ValidationController {
 
     @ExceptionHandler(ValidationException.class)

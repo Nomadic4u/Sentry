@@ -2,16 +2,19 @@ package org.example.entity;
 
 import com.alibaba.fastjson2.JSONObject;
 import com.alibaba.fastjson2.JSONWriter;
-import org.springframework.context.annotation.Bean;
+import org.slf4j.MDC;
 
-public record RestBean<T>(int code, T data, String message) {
+import java.util.Optional;
+
+public record RestBean<T>(long id, int code, T data, String message) {
     public static <T> RestBean<T> success(T data) {
-        return new RestBean<>(200, data, "请求成功");
+        return new RestBean<>(requestId(), 200, data, "请求成功");
     }
 
     public static <T> RestBean<T> success() {
         return success(null);
     }
+
     public static <T> RestBean<T> unauthorized(String message) {
         return failure(401, message);
     }
@@ -21,10 +24,22 @@ public record RestBean<T>(int code, T data, String message) {
     }
 
     public static <T> RestBean<T> failure(int code, String message) {
-        return new RestBean<>(code, null, message);
+        return new RestBean<>(requestId(), code, null, message);
     }
 
     public String asJsonString() {
         return JSONObject.toJSONString(this, JSONWriter.Feature.WriteNulls);
+    }
+
+    // 无权限
+    public static <T> RestBean<T> noPermission() {
+        return new RestBean<>(requestId(), 401, null, "权限不足, 拒绝访问");
+    }
+
+    // 从MDC中获取当前请求的ID
+    public static long requestId() {
+        String reqId = Optional.ofNullable(MDC.get("reqId")).orElse("0");
+        return Long.parseLong(reqId);
+
     }
 }

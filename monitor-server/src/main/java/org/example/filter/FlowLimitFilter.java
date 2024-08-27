@@ -6,61 +6,82 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpFilter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.example.entity.RestBean;
 import org.example.utils.Const;
+import org.example.utils.FlowUtils;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.annotation.Order;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.util.Optional;
-import java.util.concurrent.TimeUnit;
+import java.io.PrintWriter;
 
 
-// 用户限流
+/**
+ * 限流控制过滤器
+ * 防止用户高频请求接口, 借助redis实现
+ */
+@Slf4j
 @Component
 @Order(Const.ORDER_LIMIT)
 public class FlowLimitFilter extends HttpFilter {
     @Resource
     StringRedisTemplate template;
 
+    // 最大请求次数限制
+    @Value("${spring.web.flow.limit}")
+    int limit;
+
+    // 计时时间周期
+    @Value("${spring.web.flow.period}")
+    int period;
+
+    // 超出请求限制封禁时间
+    @Value("${spring.web.flow.block}")
+    int block;
+
+    @Resource
+    FlowUtils flowUtils;
+
     @Override
     protected void doFilter(HttpServletRequest request, HttpServletResponse response, FilterChain chain) throws IOException, ServletException {
-        String adress = request.getRemoteAddr();
-        if (this.tryCount(adress)) {
-            chain.doFilter(request, response);
-        } else {
+        String address = request.getRemoteAddr(); // 获取到IP
+        if (!tryCount(address))
             this.writeBlockMessage(response);
-        }
+        else
+            chain.doFilter(request, response);
     }
 
+    /**
+     * 为响应编写拦截内容，提示用户操作频繁
+     *
+     * @param response 响应
+     * @throws IOException 可能的异常
+     */
     private void writeBlockMessage(HttpServletResponse response) throws IOException {
         response.setStatus(HttpServletResponse.SC_FORBIDDEN);
         response.setContentType("application/json;charset=utf-8");
-        response.getWriter().write(RestBean.forbidden("访问过于频繁，请稍后再试").toString());
+        PrintWriter writer = response.getWriter();
+        writer.write(RestBean.forbidden("操作频繁，请稍后再试").asJsonString());
     }
 
-    // 统计单位时间被用户的访问次数
+    /**
+     * 尝试对指定IP地址请求计数, 如果被限制将无法继续访问
+     *
+     * @param ip 请求IP地址
+     * @return 是否操作成功
+     */
     private boolean tryCount(String ip) {
         synchronized (ip.intern()) {
-            if (Boolean.TRUE.equals(template.hasKey(Const.FLOW_LIMIT_BLOCK + ip))) {
+            if (Boolean.TRUE.equals(template.hasKey(Const.FLOW_LIMIT_BLOCK + ip))) // 是否被拉黑
                 return false;
-            }
-            return this.limitPeriodCheck(ip);
+            String counterKey = Const.FLOW_LIMIT_COUNTER + ip;
+            String blockKey = Const.FLOW_LIMIT_BLOCK + ip;
+            return flowUtils.limitPeriodCheck(counterKey, blockKey, block, limit, period);
         }
     }
 
-    private boolean limitPeriodCheck(String ip) {
-        if (Boolean.TRUE.equals(template.hasKey(Const.FLOW_LIMIT_COUNTER + ip))) {
-            long increment = Optional.ofNullable(template.opsForValue().increment(Const.FLOW_LIMIT_COUNTER + ip)).orElse(0L);
-            if (increment > 10) {
-                template.opsForValue().set(Const.FLOW_LIMIT_BLOCK + ip, "", 30, TimeUnit.SECONDS);
-                return false;
-            }
-        } else {
-            template.opsForValue().set(Const.FLOW_LIMIT_COUNTER + ip, "1", 3, TimeUnit.SECONDS);
 
-        }
-        return true;
-    }
 }
