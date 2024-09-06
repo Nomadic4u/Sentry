@@ -67,7 +67,7 @@
 
 - 访问主机的 `8086` 端口进入 InfluxDB 的控制台
 - 设置用户为 `admin`，密码 `monitorinfluxdbadmin`
-- 创建新的 Bucket，名称为：`lite-monitor`，推荐设置过期时间为 7 天
+- 创建新的 Bucket，名称为：`monitor`，推荐设置过期时间为 7 天
 
 部署 RabbitMQ：
 
